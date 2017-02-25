@@ -1,17 +1,19 @@
 package reversi
 
-const (
-	DEPTH_TH = 6
-)
-
+// Player TODO
 type Player interface {
 	Think(b Board) Pos
 }
 
+// ComputerPlayer TODO
 type ComputerPlayer struct {
 	stone int
 }
 
+// Evaluate Abstract Method
+type Evaluate func(b *Board, stone int) int
+
+// NewComputerPlayer Constructor of ComputerPlayer struct
 func NewComputerPlayer(stone int) *ComputerPlayer {
 	if stone != STONE_BLACK && stone != STONE_WHITE {
 		panic("Stone must be STONE_BLACK or STONE_WHITE!")
@@ -21,7 +23,7 @@ func NewComputerPlayer(stone int) *ComputerPlayer {
 	return p
 }
 
-func (p *ComputerPlayer) Think(b Board) Pos {
+func (p *ComputerPlayer) Think(b Board, e Evaluate, depth int) Pos {
 
 	movables := b.CalcMovable(p.stone)
 
@@ -31,20 +33,21 @@ func (p *ComputerPlayer) Think(b Board) Pos {
 		return Pos{Index: movables[0], Stone: p.stone}
 	}
 
-	score, index := p.alphabeta(&b, p.stone, -10000, 10000, DEPTH_TH)
+	score, index := p.alphabeta(&b, e, p.stone, -10000, 10000, depth)
 	return Pos{Index: index, Stone: p.stone, Score: score}
 }
 
-func (p *ComputerPlayer) alphabeta(b *Board, stone, alpha, beta, depth int) (int, int) {
+func (p *ComputerPlayer) alphabeta(b *Board, eval Evaluate, stone, alpha, beta, depth int) (int, int) {
 
 	if depth <= 0 || b.CheckGameover() {
-		return p.evaluate(b, stone), INDEX_SKIP
+		//return p.evaluate(b, stone), INDEX_SKIP
+		return eval(b, stone), INDEX_SKIP
 	}
 
 	movables := b.CalcMovable(stone)
 	if len(movables) == 0 {
 		b.Skip(stone)
-		score, _ := p.alphabeta(b, -stone, -beta, -alpha, depth-1)
+		score, _ := p.alphabeta(b, eval, -stone, -beta, -alpha, depth-1)
 		b.Undo()
 		score = -score
 		return score, INDEX_SKIP
@@ -53,7 +56,7 @@ func (p *ComputerPlayer) alphabeta(b *Board, stone, alpha, beta, depth int) (int
 	bestindex := INDEX_SKIP
 	for _, index := range movables {
 		b.Move(index, stone)
-		score, _ := p.alphabeta(b, -stone, -beta, -alpha, depth-1)
+		score, _ := p.alphabeta(b, eval, -stone, -beta, -alpha, depth-1)
 		b.Undo()
 		score = -score
 
@@ -66,18 +69,4 @@ func (p *ComputerPlayer) alphabeta(b *Board, stone, alpha, beta, depth int) (int
 		}
 	}
 	return alpha, bestindex
-}
-
-func (p *ComputerPlayer) evaluate(b *Board, stone int) int {
-
-	rest_turn := b.CountStone(STONE_BLANK)
-
-	mnum, enum := b.CountStone(stone), b.CountStone(-stone)
-	if rest_turn < DEPTH_TH {
-		return mnum - enum
-	}
-	mmovables := b.CalcMovable(p.stone)
-	emovables := b.CalcMovable(-p.stone)
-
-	return (mnum - enum) + 6*(len(mmovables)-len(emovables))
 }

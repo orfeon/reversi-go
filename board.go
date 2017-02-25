@@ -19,6 +19,7 @@ var (
 	directionsxth = [8]int{7, -1, 0, 7, 0, 7, -1, 0}
 )
 
+// Pos Stone position struct
 type Pos struct {
 	Index       int
 	Stone       int
@@ -30,26 +31,30 @@ func (p *Pos) String() string {
 	return fmt.Sprintf("%d", p.Index)
 }
 
+// History Stone position history struct
 type History struct {
 	poslist   [120]Pos
 	lastindex int
 }
 
+// NewHistory Constructor of History
 func NewHistory() *History {
 	h := new(History)
 	return h
 }
 
+// Push Push history struct to stack
 func (h *History) Push(pos Pos) {
 	h.poslist[h.lastindex] = pos
-	h.lastindex += 1
+	h.lastindex++
 }
 
+// Pop Pos history struct from stack
 func (h *History) Pop() Pos {
 	if h.lastindex == 0 {
 		return Pos{Index: -1, Stone: 0}
 	}
-	h.lastindex -= 1
+	h.lastindex--
 	pos := h.poslist[h.lastindex]
 	return pos
 }
@@ -158,7 +163,7 @@ func (b *Board) CountStone(stoneToCount int) int {
 	stoneCount := 0
 	for _, stone := range b.Stones {
 		if stone == stoneToCount {
-			stoneCount += 1
+			stoneCount++
 		}
 	}
 	return stoneCount
