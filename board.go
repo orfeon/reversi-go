@@ -17,6 +17,10 @@ const (
 var (
 	directions    = [8]int{-9, -8, -7, -1, 1, 7, 8, 9} // leftup, up, rightup, left, right, leftdown, down, rightdown
 	directionsxth = [8]int{7, -1, 0, 7, 0, 7, -1, 0}
+	line1         = [8]int{0, 1, 2, 3, 4, 5, 6, 7}
+	line2         = [8]int{56, 57, 58, 59, 60, 61, 62, 63}
+	line3         = [8]int{0, 8, 16, 24, 32, 40, 48, 56}
+	line4         = [8]int{7, 15, 23, 31, 39, 47, 55, 63}
 )
 
 // Pos Stone position struct
@@ -89,12 +93,14 @@ func (h *History) CheckLastSkipNum() int {
 type Board struct {
 	Stones  [MAX_STONE_NUM]int
 	history History
+	Liverty [MAX_STONE_NUM]int
 }
 
 func NewBoard() *Board {
 	b := new(Board)
 	b.Stones[27], b.Stones[28] = STONE_WHITE, STONE_BLACK
 	b.Stones[35], b.Stones[36] = STONE_BLACK, STONE_WHITE
+	b.Liverty = b.Stones
 	return b
 }
 
@@ -113,6 +119,12 @@ func (b *Board) Move(index, stone int) int {
 		b.Stones[acquirable] = stone
 	}
 	b.Stones[index] = stone
+	for _, dir := range directions {
+		if index+dir < 0 || index+dir > 63 {
+			continue
+		}
+		b.Liverty[index+dir]--
+	}
 	pos := Pos{Index: index, Stone: stone, Acquirables: acquirables}
 	b.history.Push(pos)
 	return len(acquirables) + 1
@@ -132,6 +144,12 @@ func (b *Board) Undo() {
 		b.Stones[index] = -stone
 	}
 	b.Stones[pos.Index] = STONE_BLANK
+	for _, dir := range directions {
+		if pos.Index+dir < 0 || pos.Index+dir > 63 {
+			continue
+		}
+		b.Liverty[pos.Index+dir]++
+	}
 
 }
 
@@ -221,4 +239,80 @@ func (b *Board) calcAcquirables(index, stone int) []int {
 	}
 
 	return acquirables
+}
+
+func (b *Board) CountMobility(stone int) int {
+	return len(b.CalcMovable(stone))
+}
+
+func (b *Board) CountLiverty(stone int) int {
+	score := 0
+	for index := 0; index < MAX_STONE_NUM; index++ {
+		if b.Liverty[index] == stone {
+			score += b.Liverty[index]
+		}
+	}
+	return score
+}
+
+func (b *Board) CountStable(stone int) int {
+	score := 0
+	score += b.countStable(line1, stone)
+	score += b.countStable(line2, stone)
+	score += b.countStable(line3, stone)
+	score += b.countStable(line4, stone)
+	return score
+}
+
+func (b *Board) CountWindow(stone int) int {
+	score := 0
+	score += b.countWindow(line1, stone)
+	score += b.countWindow(line2, stone)
+	score += b.countWindow(line3, stone)
+	score += b.countWindow(line4, stone)
+	return score
+}
+
+func (b *Board) CountCornerStone(stone int) int {
+	score := 0
+	for i := range [4]int{0, 7, 56, 63} {
+		if b.Stones[i] == stone {
+			score++
+		}
+	}
+	return score
+}
+
+func (b *Board) countStable(line [8]int, stone int) int {
+	score := 0
+	for i := 0; i < 8; i++ {
+		if b.Stones[line[i]] != stone {
+			break
+		}
+		score++
+	}
+	if score < 8 {
+		for i := 7; i >= 0; i-- {
+			if b.Stones[line[i]] != stone {
+				break
+			}
+			score++
+		}
+	}
+	return score
+}
+
+func (b *Board) countWindow(line [8]int, stone int) int {
+	if b.Stones[line[0]] == stone || b.Stones[line[7]] == stone {
+		return 0
+	}
+	for i := 2; i < 6; i++ {
+		if b.Stones[line[i]] != stone {
+			return 0
+		}
+	}
+	if (b.Stones[line[1]] == stone && b.Stones[line[7]] == stone) || (b.Stones[line[1]] != stone && b.Stones[line[7]] != stone) {
+		return 0
+	}
+	return 1
 }
